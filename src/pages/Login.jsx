@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useSnackbar } from "../context/SnackbarContext";
 import {
@@ -11,12 +11,25 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { useNavigate, Link } from "react-router-dom";
-// import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/AuthContext";
 
 const Login = () => {
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
   const [loading, setLoading] = useState(false);
+  const { user, login, loadingUser } = useAuth();
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  useEffect(() => {
+    if (!loadingUser) {
+      if (user) {
+        navigate("/"); // already logged in
+      } else {
+        setCheckingAuth(false); // show login form
+      }
+    }
+  }, [user, loadingUser, navigate]);
+
   const {
     register,
     handleSubmit,
@@ -29,10 +42,10 @@ const Login = () => {
   const onSubmit = async (data) => {
     try {
       setLoading(true);
-      console.log(data);
+      await login(data.email, data.password);
       showSnackbar("Login successful!", "success");
       reset();
-      navigate("/feed");
+      navigate("/");
     } catch (err) {
       showSnackbar(err?.response?.data?.message || "Login failed", "error");
       reset();
@@ -40,6 +53,17 @@ const Login = () => {
       setLoading(false);
     }
   };
+
+  if (checkingAuth) {
+    return (
+      <Backdrop
+        open={true}
+        sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
+      >
+        <CircularProgress color="inherit" />
+      </Backdrop>
+    );
+  }
 
   return (
     <>
@@ -179,7 +203,6 @@ const Login = () => {
 
             <Link
               to="/signup"
-              passHref
               style={{
                 textDecoration: "underline",
                 color: "white",

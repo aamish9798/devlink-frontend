@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const Navbar = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [isShow, setIsShow] = useState(false);
 
   const toggleMenu = () => {
@@ -48,7 +48,10 @@ const Navbar = () => {
           <div className="flex items-center">
             <div className="p-1.5 border border-white/15 rounded-xl mr-2 md:mr-6">
               {user ? (
-                <button className="px-5 py-1.5 rounded-lg bg-[#8C45FF]/40 backdrop-blur text-white cursor-pointer border border-white/15 shadow-inner-custom text-xs md:text-base">
+                <button
+                  onClick={logout}
+                  className="px-5 py-1.5 rounded-lg bg-[#8C45FF]/40 backdrop-blur text-white cursor-pointer border border-white/15 shadow-inner-custom text-xs md:text-base"
+                >
                   Logout
                 </button>
               ) : (

@@ -12,38 +12,99 @@ import {
   Backdrop,
   CircularProgress,
 } from "@mui/material";
+import { AiOutlineClose } from "react-icons/ai";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useSnackbar } from "../context/SnackbarContext";
 import { useNavigate, Link } from "react-router-dom";
-import { useState } from "react";
+import { useAuth } from "../context/AuthContext";
+
+import api from "../services/api";
 
 const Signup = () => {
   const { showSnackbar } = useSnackbar();
   const {
     register,
     handleSubmit,
+    setValue,
     watch,
     reset,
     formState: { errors, isValid },
   } = useForm({ mode: "onChange" });
 
   const navigate = useNavigate();
+  const { user, loadingUser } = useAuth();
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [loading, setLoading] = useState(false);
+
   const password = watch("password");
+  const profileImg = watch("profileImg");
+
+  const [preview, setPreview] = useState(null);
+
+  useEffect(() => {
+    if (!loadingUser) {
+      if (user) {
+        navigate("/"); // already logged in
+      } else {
+        setCheckingAuth(false); // show login form
+      }
+    }
+  }, [user, loadingUser, navigate]);
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setPreview(URL.createObjectURL(file));
+    } else {
+      setPreview(null);
+    }
+  };
+
+  const clearFile = () => {
+    setPreview(null);
+    setValue("profileImg", null);
+  };
 
   const onSubmit = async (data) => {
     try {
       setLoading(true);
       console.log(data);
-      showSnackbar("Account created successfully!", "success");
+      const formData = new FormData();
+
+      formData.append("firstName", data.firstName);
+      formData.append("lastName", data.lastName);
+      formData.append("email", data.email);
+      formData.append("gender", data.gender);
+      formData.append("password", data.password);
+      formData.append("profileImg", data.profileImg[0]);
+
+      const res = await api.post("/auth/register", formData);
+
+      showSnackbar(
+        res?.data?.message || "Account created successfully!",
+        "success"
+      );
       navigate("/login");
     } catch (err) {
       showSnackbar(err?.response?.data?.message || "Signup failed", "error");
     } finally {
       setLoading(false);
       reset();
+      setPreview(null);
     }
   };
+
+  if (checkingAuth) {
+    return (
+      <Backdrop
+        open={true}
+        sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
+      >
+        <CircularProgress color="inherit" />
+      </Backdrop>
+    );
+  }
 
   return (
     <>
@@ -191,6 +252,79 @@ const Signup = () => {
               },
             }}
           />
+
+          <Typography
+            variant="body1"
+            align="center"
+            sx={{ mt: 2, mb: 1, display: "flex" }}
+          >
+            <span className="bg-gradient-to-t from-[#B372CF] to-[#FFFFFF] bg-clip-text text-transparent font-bold">
+              Profile Image
+            </span>
+          </Typography>
+
+          <div className="flex justify-between items-center">
+            <label
+              htmlFor="upload-image"
+              className="px-1.5 py-2.5 border border-white/15 rounded-xl cursor-pointer"
+            >
+              <span className="px-2 py-1 rounded-lg bg-[#8C45FF]/40 backdrop-blur text-white cursor-pointer border border-white/15 shadow-inner-custom text-xs md:text-base">
+                Upload Image
+              </span>
+            </label>
+
+            <input
+              type="file"
+              id="upload-image"
+              accept="image/*"
+              {...register("profileImg", {
+                required: "Profile image is required",
+                onChange: handleFileChange,
+              })}
+              style={{ display: "none" }}
+            />
+
+            {preview && (
+              <div
+                style={{
+                  position: "relative",
+                  display: "inline-block",
+                }}
+              >
+                <img
+                  src={preview}
+                  alt="Preview"
+                  style={{
+                    width: 60,
+                    height: 60,
+                    objectFit: "cover",
+                    borderRadius: 50,
+                  }}
+                />
+                <button
+                  onClick={clearFile}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    right: 0,
+                    backgroundColor: "rgba(255,255,255,0.7)",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: "2px",
+                    borderRadius: "50%",
+                  }}
+                  aria-label="Clear image"
+                >
+                  <AiOutlineClose size={16} />
+                </button>
+              </div>
+            )}
+          </div>
+          {errors.profileImg && (
+            <Typography variant="caption" color="error" sx={{ marginTop: 1 }}>
+              {errors.profileImg.message}
+            </Typography>
+          )}
 
           <FormControl
             sx={{
@@ -357,7 +491,6 @@ const Signup = () => {
 
             <Link
               to="/login"
-              passHref
               style={{
                 textDecoration: "underline",
                 color: "white",

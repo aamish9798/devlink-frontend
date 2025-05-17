@@ -1,22 +1,39 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { getToken, removeToken, setToken } from "../utils/auth";
+import api from "../services/api";
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [loadingUser, setLoadingUser] = useState(true); // 👈 NEW
 
   useEffect(() => {
     const token = getToken();
     if (token) {
-      // Replace this with a real API call
-      setUser({ name: "Demo User", email: "demo@example.com" });
+      api
+        .get("/auth/profile")
+        .then((res) => setUser(res.data))
+        .catch((err) => {
+          if (err.response?.status === 401) {
+            removeToken();
+          }
+          setUser(null);
+        })
+        .finally(() => {
+          setLoadingUser(false); // 👈 Done loading
+        });
+    } else {
+      setUser(null);
+      setLoadingUser(false);
     }
   }, []);
 
-  const login = (userData, token) => {
+  const login = async (email, password) => {
+    const response = await api.post("/auth/login", { email, password });
+    const { token, user } = response.data;
     setToken(token);
-    setUser(userData);
+    setUser(user);
   };
 
   const logout = () => {
@@ -25,7 +42,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, loadingUser }}>
       {children}
     </AuthContext.Provider>
   );
